@@ -32,6 +32,7 @@ async function run() {
         await client.connect();
 
         const serviceCollection = client.db("carDoc").collection("services");
+        const bookingCollection = client.db("carDoc").collection("bookings");
 
         app.get('/services', async (req, res) => {
             const cursor = serviceCollection.find();
@@ -51,6 +52,13 @@ async function run() {
 
             const result = await serviceCollection.findOne(query, options);
             res.send(result);
+        })
+
+        //booking
+
+        app.post('/services', async (req, res) => {
+            const booking = req.body;
+            console.log(booking);
         })
 
 
