@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const app = express();
+const cookieParser = require('cookie-parser');
 const port = process.env.PORT || 5000;
 require('dotenv').config()
 
@@ -10,8 +12,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 app.use(express.json());
 app.use(cors());
 
-//autorenewal
-//dV6xj5S1Mx9HYRDa
+
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vlqjil4.mongodb.net/?retryWrites=true&w=majority`;
@@ -34,6 +36,19 @@ async function run() {
         const serviceCollection = client.db("carDoc").collection("services");
         const bookingCollection = client.db("carDoc").collection("bookings");
 
+        //auth related api
+
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            console.log('user for token', user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            res.send({ token });
+        })
+
+
+
+        //SERVICES related api
+
         app.get('/services', async (req, res) => {
             const cursor = serviceCollection.find();
             const result = await cursor.toArray();
@@ -47,7 +62,7 @@ async function run() {
             const options = {
 
                 // Include only the `title` and `imdb` fields in the returned document
-                projection: { title: 1, price: 1, service_id: 1 },
+                projection: { title: 1, price: 1, service_id: 1, img: 1 },
             };
 
             const result = await serviceCollection.findOne(query, options);
@@ -56,9 +71,49 @@ async function run() {
 
         //booking
 
-        app.post('/services', async (req, res) => {
+        app.get('/bookings', async (req, res) => {
+            console.log(req.query.email);
+
+            let query = {};
+            if (req.query?.email) {
+                query = { email: req.query.email }
+            }
+            const result = await bookingCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        app.post('/bookings', async (req, res) => {
             const booking = req.body;
             console.log(booking);
+            const result = await bookingCollection.insertOne(booking);
+            res.send(result);
+
+        })
+
+        app.patch('/bookings', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) }
+
+            const updatedBooking = req.body;
+            console.log(updatedBooking);
+            const updateDoc = {
+                $set: {
+                    status: updatedBooking.status
+                },
+            };
+            const result = await bookingCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        })
+
+        app.delete('/bookings/:id', async (req, res) => {
+
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+
+            const result = await bookingCollection.deleteOne(query);
+            res.send(result);
+
         })
 
 
